@@ -6,39 +6,47 @@ export default async function handler(req, res) {
         }
 
           try {
-              const { messages } = req.body || {};
+              if (!process.env.GEMINI_API_KEY) {
+                    return res.status(500).json({
+                            error: "GEMINI_API_KEY is missing in Vercel."
+                                  });
+                                      }
 
-                  if (!Array.isArray(messages) || messages.length === 0) {
-                        return res.status(400).json({ error: "No messages provided" });
-                            }
+                                          const { messages } = req.body || {};
 
-                                const ai = new GoogleGenAI({
-                                      apiKey: process.env.GEMINI_API_KEY
-                                          });
+                                              if (!Array.isArray(messages) || messages.length === 0) {
+                                                    return res.status(400).json({ error: "No messages provided." });
+                                                        }
 
-                                              const contents = messages.map((message) => ({
-                                                    role: message.role === "assistant" ? "model" : "user",
-                                                          parts: [{ text: String(message.content || "") }]
-                                                              }));
+                                                            const ai = new GoogleGenAI({
+                                                                  apiKey: process.env.GEMINI_API_KEY
+                                                                      });
 
-                                                                  const response = await ai.models.generateContent({
-                                                                        model: "gemini-3.8-flash",
-                                                                              contents,
-                                                                                    config: {
-                                                                                            systemInstruction:
-                                                                                                      "You are NovaAI, a helpful, friendly and intelligent AI assistant. Give clear, accurate and useful answers."
-                                                                                                            }
-                                                                                                                });
+                                                                          const contents = messages
+                                                                                .filter(m => m && m.content)
+                                                                                      .map(m => ({
+                                                                                              role: m.role === "assistant" ? "model" : "user",
+                                                                                                      parts: [{ text: String(m.content) }]
+                                                                                                            }));
 
-                                                                                                                    return res.status(200).json({
-                                                                                                                          reply: response.text || "I couldn't generate a response."
-                                                                                                                              });
+                                                                                                                const response = await ai.models.generateContent({
+                                                                                                                      model: "gemini-3.8-flash",
+                                                                                                                            contents,
+                                                                                                                                  config: {
+                                                                                                                                          systemInstruction:
+                                                                                                                                                    "You are NovaAI, a helpful, accurate and friendly AI assistant. Explain things clearly and step by step when useful."
+                                                                                                                                                          }
+                                                                                                                                                              });
 
-                                                                                                                                } catch (error) {
-                                                                                                                                    console.error(error);
+                                                                                                                                                                  return res.status(200).json({
+                                                                                                                                                                        reply: response.text || "I couldn't generate a response."
+                                                                                                                                                                            });
 
-                                                                                                                                        return res.status(500).json({
-                                                                                                                                              error: "AI request failed."
-                                                                                                                                                  });
-                                                                                                                                                    }
-                                                                                                                                                    }
+                                                                                                                                                                              } catch (error) {
+                                                                                                                                                                                  console.error("NovaAI error:", error);
+
+                                                                                                                                                                                      return res.status(500).json({
+                                                                                                                                                                                            error: "NovaAI could not generate a response."
+                                                                                                                                                                                                });
+                                                                                                                                                                                                  }
+                                                                                                                                                                                                  }
