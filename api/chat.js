@@ -6,49 +6,63 @@ export default async function handler(req, res) {
         }
 
           try {
-              const key = process.env.GEMINI_API_KEY;
+              const apiKey = process.env.GEMINI_API_KEY;
 
-                  if (!key) {
+                  if (!apiKey) {
                         return res.status(500).json({
-                                error: "GEMINI_API_KEY is missing."
+                                error: "GEMINI_API_KEY is missing from Vercel."
                                       });
                                           }
 
                                               const { messages } = req.body || {};
 
-                                                  if (!Array.isArray(messages) || !messages.length) {
+                                                  if (!Array.isArray(messages) || messages.length === 0) {
                                                         return res.status(400).json({
-                                                                error: "No messages received."
+                                                                error: "No messages were received."
                                                                       });
                                                                           }
 
-                                                                              const ai = new GoogleGenAI({ apiKey: key });
+                                                                              const ai = new GoogleGenAI({
+                                                                                    apiKey: apiKey
+                                                                                        });
 
-                                                                                  const contents = messages
-                                                                                        .filter(m => m && m.content)
-                                                                                              .map(m => ({
-                                                                                                      role: m.role === "assistant" ? "model" : "user",
-                                                                                                              parts: [{ text: String(m.content) }]
-                                                                                                                    }));
+                                                                                            const contents = messages
+                                                                                                  .filter(message => message && message.content)
+                                                                                                        .map(message => ({
+                                                                                                                role: message.role === "assistant" ? "model" : "user",
+                                                                                                                        parts: [
+                                                                                                                                  {
+                                                                                                                                              text: String(message.content)
+                                                                                                                                                        }
+                                                                                                                                                                ]
+                                                                                                                                                                      }));
 
-                                                                                                                        const result = await ai.models.generateContent({
-                                                                                                                              model: "gemini-3.8-flash",
-                                                                                                                                    contents,
-                                                                                                                                          config: {
-                                                                                                                                                  systemInstruction:
-                                                                                                                                                            "You are NovaAI, a helpful, accurate and friendly AI assistant."
-                                                                                                                                                                  }
-                                                                                                                                                                      });
+                                                                                                                                                                          const response = await ai.models.generateContent({
+                                                                                                                                                                                model: "gemini-2.5-flash",
+                                                                                                                                                                                      contents: contents,
+                                                                                                                                                                                            config: {
+                                                                                                                                                                                                    systemInstruction:
+                                                                                                                                                                                                              "You are NovaAI, a helpful, accurate and friendly AI assistant. Give clear answers and explain things step by step when useful."
+                                                                                                                                                                                                                    }
+                                                                                                                                                                                                                        });
 
-                                                                                                                                                                          return res.status(200).json({
-                                                                                                                                                                                reply: result.text || "No response was generated."
-                                                                                                                                                                                    });
+                                                                                                                                                                                                                            const reply = response.text;
 
-                                                                                                                                                                                      } catch (error) {
-                                                                                                                                                                                          console.error("NovaAI:", error);
+                                                                                                                                                                                                                                if (!reply) {
+                                                                                                                                                                                                                                      return res.status(500).json({
+                                                                                                                                                                                                                                              error: "Gemini returned an empty response."
+                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                        }
 
-                                                                                                                                                                                              return res.status(500).json({
-                                                                                                                                                                                                    error: error?.message || "Gemini request failed."
-                                                                                                                                                                                                        });
-                                                                                                                                                                                                          }
-                                                                                                                                                                                                          }
+                                                                                                                                                                                                                                                            return res.status(200).json({
+                                                                                                                                                                                                                                                                  reply: reply
+                                                                                                                                                                                                                                                                      });
+
+                                                                                                                                                                                                                                                                        } catch (error) {
+                                                                                                                                                                                                                                                                            console.error("NovaAI Gemini error:", error);
+
+                                                                                                                                                                                                                                                                                return res.status(500).json({
+                                                                                                                                                                                                                                                                                      error: error?.message || "Gemini request failed."
+                                                                                                                                                                                                                                                                                          });
+                                                                                                                                                                                                                                                                                            }
+                                                                                                                                                                                                                                                                                            }
