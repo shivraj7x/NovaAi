@@ -30,8 +30,8 @@ let messages = JSON.parse(
                                             return;
                                               }
 
-                                                messages.forEach(m => {
-                                                    addMessage(m.content, m.role);
+                                                messages.forEach(message => {
+                                                    addMessage(message.content, message.role);
                                                       });
                                                       }
 
@@ -53,67 +53,66 @@ let messages = JSON.parse(
 
                                                                                 const thinking = addMessage("Thinking...", "assistant");
 
-                                                                                  const controller = new AbortController();
-                                                                                    const timeout = setTimeout(
-                                                                                        () => controller.abort(),
-                                                                                            30000
-                                                                                              );
+                                                                                  try {
+                                                                                      const response = await fetch("/api/chat", {
+                                                                                            method: "POST",
+                                                                                                  headers: {
+                                                                                                          "Content-Type": "application/json"
+                                                                                                                },
+                                                                                                                      body: JSON.stringify({ messages })
+                                                                                                                          });
 
-                                                                                                try {
-                                                                                                    const response = await fetch("/api/chat", {
-                                                                                                          method: "POST",
-                                                                                                                headers: {
-                                                                                                                        "Content-Type": "application/json"
-                                                                                                                              },
-                                                                                                                                    body: JSON.stringify({ messages }),
-                                                                                                                                          signal: controller.signal
-                                                                                                                                              });
+                                                                                                                              const raw = await response.text();
 
-                                                                                                                                                  const data = await response.json();
+                                                                                                                                  thinking.remove();
 
-                                                                                                                                                      if (!response.ok) {
-                                                                                                                                                            throw new Error(
-                                                                                                                                                                    data.error || "Server request failed."
-                                                                                                                                                                          );
-                                                                                                                                                                              }
+                                                                                                                                      let data;
 
-                                                                                                                                                                                  thinking.remove();
+                                                                                                                                          try {
+                                                                                                                                                data = JSON.parse(raw);
+                                                                                                                                                    } catch {
+                                                                                                                                                          throw new Error(
+                                                                                                                                                                  `Server returned ${response.status}: ${raw}`
+                                                                                                                                                                        );
+                                                                                                                                                                            }
 
-                                                                                                                                                                                      messages.push({
-                                                                                                                                                                                            role: "assistant",
-                                                                                                                                                                                                  content: data.reply
-                                                                                                                                                                                                      });
+                                                                                                                                                                                if (!response.ok) {
+                                                                                                                                                                                      throw new Error(
+                                                                                                                                                                                              data.error || `Server returned ${response.status}`
+                                                                                                                                                                                                    );
+                                                                                                                                                                                                        }
 
-                                                                                                                                                                                                          addMessage(data.reply, "assistant");
-                                                                                                                                                                                                              saveMessages();
+                                                                                                                                                                                                            messages.push({
+                                                                                                                                                                                                                  role: "assistant",
+                                                                                                                                                                                                                        content: data.reply
+                                                                                                                                                                                                                            });
 
-                                                                                                                                                                                                                } catch (error) {
-                                                                                                                                                                                                                    thinking.remove();
+                                                                                                                                                                                                                                addMessage(data.reply, "assistant");
+                                                                                                                                                                                                                                    saveMessages();
 
-                                                                                                                                                                                                                        let message = "AI connection failed.";
+                                                                                                                                                                                                                                      } catch (error) {
+                                                                                                                                                                                                                                          thinking.remove();
 
-                                                                                                                                                                                                                            if (error.name === "AbortError") {
-                                                                                                                                                                                                                                  message = "AI request timed out. Please try again.";
-                                                                                                                                                                                                                                      } else if (error.message) {
-                                                                                                                                                                                                                                            message = "AI error: " + error.message;
-                                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                                              addMessage(
+                                                                                                                                                                                                                                                    "AI error: " + error.message,
+                                                                                                                                                                                                                                                          "assistant"
+                                                                                                                                                                                                                                                              );
 
-                                                                                                                                                                                                                                                    addMessage(message, "assistant");
+                                                                                                                                                                                                                                                                  console.error(error);
 
-                                                                                                                                                                                                                                                      } finally {
-                                                                                                                                                                                                                                                          clearTimeout(timeout);
-                                                                                                                                                                                                                                                              sendBtn.disabled = false;
-                                                                                                                                                                                                                                                                  input.focus();
-                                                                                                                                                                                                                                                                    }
-                                                                                                                                                                                                                                                                    }
+                                                                                                                                                                                                                                                                    } finally {
+                                                                                                                                                                                                                                                                        sendBtn.disabled = false;
+                                                                                                                                                                                                                                                                            input.focus();
+                                                                                                                                                                                                                                                                              }
+                                                                                                                                                                                                                                                                              }
 
-                                                                                                                                                                                                                                                                    sendBtn.addEventListener("click", sendMessage);
+                                                                                                                                                                                                                                                                              sendBtn.addEventListener("click", sendMessage);
 
-                                                                                                                                                                                                                                                                    input.addEventListener("keydown", event => {
-                                                                                                                                                                                                                                                                      if (event.key === "Enter" && !event.shiftKey) {
-                                                                                                                                                                                                                                                                          event.preventDefault();
-                                                                                                                                                                                                                                                                              sendMessage();
-                                                                                                                                                                                                                                                                                }
-                                                                                                                                                                                                                                                                                });
+                                                                                                                                                                                                                                                                              input.addEventListener("keydown", event => {
+                                                                                                                                                                                                                                                                                if (event.key === "Enter" && !event.shiftKey) {
+                                                                                                                                                                                                                                                                                    event.preventDefault();
+                                                                                                                                                                                                                                                                                        sendMessage();
+                                                                                                                                                                                                                                                                                          }
+                                                                                                                                                                                                                                                                                          });
 
-                                                                                                                                                                                                                                                                                renderMessages();
+                                                                                                                                                                                                                                                                                          renderMessages();
