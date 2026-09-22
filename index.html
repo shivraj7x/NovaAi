@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>NovaAI</title>
+        <link rel="stylesheet" href="style.css">
+        </head>
+
+        <body>
+
+          <header class="topbar">
+              <div class="logo">NovaAI</div>
+                  <button id="newChatBtn" type="button">＋ New Chat</button>
+                    </header>
+
+                      <main class="app">
+
+                          <section class="welcome">
+                                <h1>What can I help with?</h1>
+                                      <p>Your AI assistant for questions, learning and ideas.</p>
+                                          </section>
+
+                                              <section id="chat" class="chat"></section>
+
+                                                  <div class="suggestions">
+                                                        <button type="button" onclick="usePrompt('Explain this topic to me simply')">
+                                                                Explain something
+                                                                      </button>
+
+                                                                            <button type="button" onclick="usePrompt('Help me study for my exam')">
+                                                                                    Help me study
+                                                                                          </button>
+
+                                                                                                <button type="button" onclick="usePrompt('Give me some creative ideas')">
+                                                                                                        Brainstorm ideas
+                                                                                                              </button>
+                                                                                                                  </div>
+
+                                                                                                                      <div class="input-area">
+                                                                                                                            <textarea
+                                                                                                                                    id="messageInput"
+                                                                                                                                            placeholder="Message NovaAI..."
+                                                                                                                                                    rows="1"
+                                                                                                                                                          ></textarea>
+
+                                                                                                                                                                <button id="sendBtn" type="button">➤</button>
+                                                                                                                                                                    </div>
+
+                                                                                                                                                                        <p class="notice">
+                                                                                                                                                                              NovaAI can make mistakes. Check important information.
+                                                                                                                                                                                  </p>
+
+                                                                                                                                                                                    </main>
+
+                                                                                                                                                                                      <script>
+                                                                                                                                                                                          function usePrompt(text) {
+                                                                                                                                                                                                const input = document.getElementById("messageInput");
+                                                                                                                                                                                                      input.value = text;
+                                                                                                                                                                                                            input.focus();
+                                                                                                                                                                                                                }
+
+                                                                                                                                                                                                                    document.getElementById("newChatBtn").addEventListener("click", () => {
+                                                                                                                                                                                                                          localStorage.removeItem("nova_messages");
+                                                                                                                                                                                                                                location.reload();
+                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                      </script>
+
+                                                                                                                                                                                                                                        <script src="script.js"></script>
+
+                                                                                                                                                                                                                                        </body>
+                                                                                                                                                                                                                                        </html>
