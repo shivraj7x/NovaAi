@@ -6,47 +6,49 @@ export default async function handler(req, res) {
         }
 
           try {
-              if (!process.env.GEMINI_API_KEY) {
-                    return res.status(500).json({
-                            error: "GEMINI_API_KEY is missing in Vercel."
-                                  });
-                                      }
+              const key = process.env.GEMINI_API_KEY;
 
-                                          const { messages } = req.body || {};
+                  if (!key) {
+                        return res.status(500).json({
+                                error: "GEMINI_API_KEY is missing."
+                                      });
+                                          }
 
-                                              if (!Array.isArray(messages) || messages.length === 0) {
-                                                    return res.status(400).json({ error: "No messages provided." });
-                                                        }
+                                              const { messages } = req.body || {};
 
-                                                            const ai = new GoogleGenAI({
-                                                                  apiKey: process.env.GEMINI_API_KEY
+                                                  if (!Array.isArray(messages) || !messages.length) {
+                                                        return res.status(400).json({
+                                                                error: "No messages received."
                                                                       });
+                                                                          }
 
-                                                                          const contents = messages
-                                                                                .filter(m => m && m.content)
-                                                                                      .map(m => ({
-                                                                                              role: m.role === "assistant" ? "model" : "user",
-                                                                                                      parts: [{ text: String(m.content) }]
-                                                                                                            }));
+                                                                              const ai = new GoogleGenAI({ apiKey: key });
 
-                                                                                                                const response = await ai.models.generateContent({
-                                                                                                                      model: "gemini-3.8-flash",
-                                                                                                                            contents,
-                                                                                                                                  config: {
-                                                                                                                                          systemInstruction:
-                                                                                                                                                    "You are NovaAI, a helpful, accurate and friendly AI assistant. Explain things clearly and step by step when useful."
-                                                                                                                                                          }
-                                                                                                                                                              });
+                                                                                  const contents = messages
+                                                                                        .filter(m => m && m.content)
+                                                                                              .map(m => ({
+                                                                                                      role: m.role === "assistant" ? "model" : "user",
+                                                                                                              parts: [{ text: String(m.content) }]
+                                                                                                                    }));
 
-                                                                                                                                                                  return res.status(200).json({
-                                                                                                                                                                        reply: response.text || "I couldn't generate a response."
-                                                                                                                                                                            });
+                                                                                                                        const result = await ai.models.generateContent({
+                                                                                                                              model: "gemini-3.8-flash",
+                                                                                                                                    contents,
+                                                                                                                                          config: {
+                                                                                                                                                  systemInstruction:
+                                                                                                                                                            "You are NovaAI, a helpful, accurate and friendly AI assistant."
+                                                                                                                                                                  }
+                                                                                                                                                                      });
 
-                                                                                                                                                                              } catch (error) {
-                                                                                                                                                                                  console.error("NovaAI error:", error);
+                                                                                                                                                                          return res.status(200).json({
+                                                                                                                                                                                reply: result.text || "No response was generated."
+                                                                                                                                                                                    });
 
-                                                                                                                                                                                      return res.status(500).json({
-                                                                                                                                                                                            error: "NovaAI could not generate a response."
-                                                                                                                                                                                                });
-                                                                                                                                                                                                  }
-                                                                                                                                                                                                  }
+                                                                                                                                                                                      } catch (error) {
+                                                                                                                                                                                          console.error("NovaAI:", error);
+
+                                                                                                                                                                                              return res.status(500).json({
+                                                                                                                                                                                                    error: error?.message || "Gemini request failed."
+                                                                                                                                                                                                        });
+                                                                                                                                                                                                          }
+                                                                                                                                                                                                          }

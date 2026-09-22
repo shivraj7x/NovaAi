@@ -2,101 +2,118 @@ const chat = document.getElementById("chat");
 const input = document.getElementById("messageInput");
 const sendBtn = document.getElementById("sendBtn");
 
-let messages = JSON.parse(localStorage.getItem("nova_messages") || "[]");
+let messages = JSON.parse(
+  localStorage.getItem("nova_messages") || "[]"
+  );
 
-function saveMessages() {
-  localStorage.setItem("nova_messages", JSON.stringify(messages));
-  }
+  function saveMessages() {
+    localStorage.setItem("nova_messages", JSON.stringify(messages));
+    }
 
-  function addMessage(text, role) {
-    const div = document.createElement("div");
-      div.className = `message ${role}`;
-        div.textContent = text;
-          chat.appendChild(div);
-            chat.scrollTop = chat.scrollHeight;
-            }
+    function addMessage(text, role) {
+      const div = document.createElement("div");
+        div.className = `message ${role}`;
+          div.textContent = text;
+            chat.appendChild(div);
+              chat.scrollTop = chat.scrollHeight;
+                return div;
+                }
 
-            function renderMessages() {
-              chat.innerHTML = "";
+                function renderMessages() {
+                  chat.innerHTML = "";
 
-                if (!messages.length) {
-                    addMessage("Hi! I'm NovaAI. How can I help you?", "assistant");
-                        return;
-                          }
+                    if (!messages.length) {
+                        addMessage(
+                              "Hi! I'm NovaAI. How can I help you?",
+                                    "assistant"
+                                        );
+                                            return;
+                                              }
 
-                            messages.forEach(m => addMessage(m.content, m.role));
-                            }
+                                                messages.forEach(m => {
+                                                    addMessage(m.content, m.role);
+                                                      });
+                                                      }
 
-                            async function sendMessage() {
-                              const text = input.value.trim();
+                                                      async function sendMessage() {
+                                                        const text = input.value.trim();
 
-                                if (!text) return;
+                                                          if (!text || sendBtn.disabled) return;
 
-                                  input.value = "";
-                                    sendBtn.disabled = true;
+                                                            input.value = "";
+                                                              sendBtn.disabled = true;
 
-                                      messages.push({
-                                          role: "user",
-                                              content: text
-                                                });
+                                                                messages.push({
+                                                                    role: "user",
+                                                                        content: text
+                                                                          });
 
-                                                  addMessage(text, "user");
-                                                    saveMessages();
+                                                                            addMessage(text, "user");
+                                                                              saveMessages();
 
-                                                      const thinking = document.createElement("div");
-                                                        thinking.className = "message assistant";
-                                                          thinking.textContent = "Thinking...";
-                                                            chat.appendChild(thinking);
-                                                              chat.scrollTop = chat.scrollHeight;
+                                                                                const thinking = addMessage("Thinking...", "assistant");
 
-                                                                try {
-                                                                    const response = await fetch("/api/chat", {
-                                                                          method: "POST",
-                                                                                headers: {
-                                                                                        "Content-Type": "application/json"
-                                                                                              },
-                                                                                                    body: JSON.stringify({
-                                                                                                            messages: messages
-                                                                                                                  })
-                                                                                                                      });
+                                                                                  const controller = new AbortController();
+                                                                                    const timeout = setTimeout(
+                                                                                        () => controller.abort(),
+                                                                                            30000
+                                                                                              );
 
-                                                                                                                          const data = await response.json();
+                                                                                                try {
+                                                                                                    const response = await fetch("/api/chat", {
+                                                                                                          method: "POST",
+                                                                                                                headers: {
+                                                                                                                        "Content-Type": "application/json"
+                                                                                                                              },
+                                                                                                                                    body: JSON.stringify({ messages }),
+                                                                                                                                          signal: controller.signal
+                                                                                                                                              });
 
-                                                                                                                              thinking.remove();
+                                                                                                                                                  const data = await response.json();
 
-                                                                                                                                  if (!response.ok) {
-                                                                                                                                        throw new Error(data.error || "AI request failed");
-                                                                                                                                            }
+                                                                                                                                                      if (!response.ok) {
+                                                                                                                                                            throw new Error(
+                                                                                                                                                                    data.error || "Server request failed."
+                                                                                                                                                                          );
+                                                                                                                                                                              }
 
-                                                                                                                                                messages.push({
-                                                                                                                                                      role: "assistant",
-                                                                                                                                                            content: data.reply
-                                                                                                                                                                });
+                                                                                                                                                                                  thinking.remove();
 
-                                                                                                                                                                    addMessage(data.reply, "assistant");
-                                                                                                                                                                        saveMessages();
+                                                                                                                                                                                      messages.push({
+                                                                                                                                                                                            role: "assistant",
+                                                                                                                                                                                                  content: data.reply
+                                                                                                                                                                                                      });
 
-                                                                                                                                                                          } catch (error) {
-                                                                                                                                                                              thinking.remove();
+                                                                                                                                                                                                          addMessage(data.reply, "assistant");
+                                                                                                                                                                                                              saveMessages();
 
-                                                                                                                                                                                  const errorMessage =
-                                                                                                                                                                                        "Sorry, NovaAI couldn't connect to the AI server.";
+                                                                                                                                                                                                                } catch (error) {
+                                                                                                                                                                                                                    thinking.remove();
 
-                                                                                                                                                                                            addMessage(errorMessage, "assistant");
-                                                                                                                                                                                                console.error(error);
-                                                                                                                                                                                                  }
+                                                                                                                                                                                                                        let message = "AI connection failed.";
 
-                                                                                                                                                                                                    sendBtn.disabled = false;
-                                                                                                                                                                                                      input.focus();
-                                                                                                                                                                                                      }
+                                                                                                                                                                                                                            if (error.name === "AbortError") {
+                                                                                                                                                                                                                                  message = "AI request timed out. Please try again.";
+                                                                                                                                                                                                                                      } else if (error.message) {
+                                                                                                                                                                                                                                            message = "AI error: " + error.message;
+                                                                                                                                                                                                                                                }
 
-                                                                                                                                                                                                      sendBtn.addEventListener("click", sendMessage);
+                                                                                                                                                                                                                                                    addMessage(message, "assistant");
 
-                                                                                                                                                                                                      input.addEventListener("keydown", event => {
-                                                                                                                                                                                                        if (event.key === "Enter" && !event.shiftKey) {
-                                                                                                                                                                                                            event.preventDefault();
-                                                                                                                                                                                                                sendMessage();
-                                                                                                                                                                                                                  }
-                                                                                                                                                                                                                  });
+                                                                                                                                                                                                                                                      } finally {
+                                                                                                                                                                                                                                                          clearTimeout(timeout);
+                                                                                                                                                                                                                                                              sendBtn.disabled = false;
+                                                                                                                                                                                                                                                                  input.focus();
+                                                                                                                                                                                                                                                                    }
+                                                                                                                                                                                                                                                                    }
 
-                                                                                                                                                                                                                  renderMessages();
+                                                                                                                                                                                                                                                                    sendBtn.addEventListener("click", sendMessage);
+
+                                                                                                                                                                                                                                                                    input.addEventListener("keydown", event => {
+                                                                                                                                                                                                                                                                      if (event.key === "Enter" && !event.shiftKey) {
+                                                                                                                                                                                                                                                                          event.preventDefault();
+                                                                                                                                                                                                                                                                              sendMessage();
+                                                                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                                                                                });
+
+                                                                                                                                                                                                                                                                                renderMessages();
